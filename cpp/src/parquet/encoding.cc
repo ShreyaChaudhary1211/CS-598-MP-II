@@ -3153,11 +3153,14 @@ class ASCIIEncoder : public EncoderImpl, virtual public TypedEncoder<DType> {
 template <typename DType>
 void ASCIIEncoder<DType>::Put(const T* buffer, int num_values) {
   //tobe imple Loop through each integer value in the buffer
+  // Loop through each float value in the buffer
   for (int i = 0; i < num_values; ++i) {
     T value = buffer[i];
 
-    // Convert the integer value to ASCII representation
-    std::string ascii_representation = std::to_string(value);
+    // Convert the float value to ASCII representation with two decimal places
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2) << value;
+    std::string ascii_representation = ss.str();
 
     // Append each character of the ASCII representation followed by a null terminator
     for (char c : ascii_representation) {
@@ -3176,15 +3179,15 @@ void ASCIIEncoder<DType>::Put(const T* buffer, int num_values) {
 // ----------------------------------------------------------------------
 template <typename DType>
 int ASCIIDecoder<DType>::Decode(T* buffer, int max_values) {
-  int values_decoded = 0;
+ int values_decoded = 0;
 
   // Loop until max_values are decoded or end of input is reached
   while (values_decoded < max_values && len_ > 0) {
-    // Initialize variables to store the current integer value and its ASCII representation
+    // Initialize variables to store the current float value and its ASCII representation
     T value = 0;
     std::string ascii_representation;
 
-    // Decode the ASCII representation back into the integer value
+    // Decode the ASCII representation back into the float value
     while (len_ > 0) {
       char c = *data_;
       ++data_;
@@ -3199,18 +3202,18 @@ int ASCIIDecoder<DType>::Decode(T* buffer, int max_values) {
       ascii_representation += c;
     }
 
-    // Convert the ASCII representation to integer
+    // Convert the ASCII representation to float
     try {
-      value = static_cast<T>(std::stoi(ascii_representation));
+      value = static_cast<T>(std::stof(ascii_representation));
     } catch (const std::invalid_argument& e) {
       // Handle invalid ASCII representation
       throw ParquetException("Invalid ASCII representation");
     } catch (const std::out_of_range& e) {
-      // Handle out-of-range integer value
-      throw ParquetException("Out of range integer value");
+      // Handle out-of-range float value
+      throw ParquetException("Out of range float value");
     }
 
-    // Store the decoded integer value in the buffer
+    // Store the decoded float value in the buffer
     buffer[values_decoded] = value;
     ++values_decoded;
   }
@@ -3922,8 +3925,8 @@ std::unique_ptr<Encoder> MakeEncoder(Type::type type_num, Encoding::type encodin
       case Type::INT64:
         return std::make_unique<ASCIIEncoder<Int64Type>>(descr, pool);
       // Uncomment this when you finish implementing the float encoder and decoder:
-      // case Type::FLOAT:
-      //   return std::make_unique<ASCIIEncoder<FloatType>>(descr,pool);
+      case Type::FLOAT:
+        return std::make_unique<ASCIIEncoder<FloatType>>(descr,pool);
       default:
         throw ParquetException(
             "ASCII encoder only supports INT32 and INT64");
@@ -4007,8 +4010,8 @@ std::unique_ptr<Decoder> MakeDecoder(Type::type type_num, Encoding::type encodin
       case Type::INT64:
         return std::make_unique<ASCIIDecoder<Int64Type>>(descr);
       // Uncomment this when you finish implementing the float encoder and decoder:
-      // case Type::FLOAT:
-      //   return std::make_unique<ASCIIDecoder<FloatType>>(descr);
+      case Type::FLOAT:
+        return std::make_unique<ASCIIDecoder<FloatType>>(descr);
       default:
         throw ParquetException(
             "ASCII decoder only supports INT32 and INT64");
