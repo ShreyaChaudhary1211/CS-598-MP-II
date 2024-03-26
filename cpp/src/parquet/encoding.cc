@@ -3179,7 +3179,7 @@ void ASCIIEncoder<DType>::Put(const T* buffer, int num_values) {
 // ----------------------------------------------------------------------
 template <typename DType>
 int ASCIIDecoder<DType>::Decode(T* buffer, int max_values) {
- int values_decoded = 0;
+  int values_decoded = 0;
 
   // Loop until max_values are decoded or end of input is reached
   while (values_decoded < max_values && len_ > 0) {
