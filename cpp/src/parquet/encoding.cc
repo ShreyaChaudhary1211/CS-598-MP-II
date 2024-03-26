@@ -3152,7 +3152,23 @@ class ASCIIEncoder : public EncoderImpl, virtual public TypedEncoder<DType> {
 
 template <typename DType>
 void ASCIIEncoder<DType>::Put(const T* buffer, int num_values) {
-  // TO BE IMPLEMENTED
+  //tobe imple Loop through each integer value in the buffer
+  for (int i = 0; i < num_values; ++i) {
+    T value = buffer[i];
+
+    // Convert the integer value to ASCII representation
+    std::string ascii_representation = std::to_string(value);
+
+    // Append each character of the ASCII representation followed by a null terminator
+    for (char c : ascii_representation) {
+      // Append the character
+      PARQUET_THROW_NOT_OK(sink_.Append(&c, sizeof(char)));
+    }
+
+    // Append a null terminator ('\0') to mark the end of the string
+    char null_terminator = '\0';
+    PARQUET_THROW_NOT_OK(sink_.Append(&null_terminator, sizeof(char)));
+  }
 }
 
 // ----------------------------------------------------------------------
@@ -3196,7 +3212,46 @@ class ASCIIDecoder : public DecoderImpl, virtual public TypedDecoder<DType> {
 
 template <typename DType>
 int ASCIIDecoder<DType>::Decode(T* buffer, int max_values) {
-  // TO BE IMPLEMENTED
+  int values_decoded = 0;
+
+  // Loop until max_values are decoded or end of input is reached
+  while (values_decoded < max_values && len_ > 0) {
+    // Initialize variables to store the current integer value and its ASCII representation
+    T value = 0;
+    std::string ascii_representation;
+
+    // Decode the ASCII representation back into the integer value
+    while (len_ > 0) {
+      char c = *data_;
+      ++data_;
+      --len_;
+
+      // Break if a null terminator is encountered
+      if (c == '\0') {
+        break;
+      }
+
+      // Append the character to the ASCII representation
+      ascii_representation += c;
+    }
+
+    // Convert the ASCII representation to integer
+    try {
+      value = static_cast<T>(std::stoi(ascii_representation));
+    } catch (const std::invalid_argument& e) {
+      // Handle invalid ASCII representation
+      throw ParquetException("Invalid ASCII representation");
+    } catch (const std::out_of_range& e) {
+      // Handle out-of-range integer value
+      throw ParquetException("Out of range integer value");
+    }
+
+    // Store the decoded integer value in the buffer
+    buffer[values_decoded] = value;
+    ++values_decoded;
+  }
+
+  return values_decoded;
 }
 
 // ----------------------------------------------------------------------
