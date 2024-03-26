@@ -3153,7 +3153,7 @@ class ASCIIEncoder : public EncoderImpl, virtual public TypedEncoder<DType> {
 template <typename DType>
 void ASCIIEncoder<DType>::Put(const T* buffer, int num_values) {
   //tobe imple Loop through each integer value in the buffer
-  // Loop through each float value in the buffer
+   // Loop through each float value in the buffer
   for (int i = 0; i < num_values; ++i) {
     T value = buffer[i];
 
@@ -3173,13 +3173,49 @@ void ASCIIEncoder<DType>::Put(const T* buffer, int num_values) {
     PARQUET_THROW_NOT_OK(sink_.Append(&null_terminator, sizeof(char)));
   }
 }
+
 // ----------------------------------------------------------------------
 // ASCII Decoder: Decodes ASCII into integers
 // Added by CS598
 // ----------------------------------------------------------------------
 template <typename DType>
+class ASCIIDecoder : public DecoderImpl, virtual public TypedDecoder<DType> {
+ public:
+  using T = typename DType::c_type;
+
+  explicit ASCIIDecoder(const ColumnDescriptor* descr)
+      : DecoderImpl(descr, Encoding::ASCII){
+    if (DType::type_num != Type::INT32 && DType::type_num != Type::INT64 && DType::type_num != Type::FLOAT) {
+      throw ParquetException("ascii decoding should only be for integer data.");
+    }
+    if (descr_ && descr_->physical_type() == Type::FIXED_LEN_BYTE_ARRAY) {
+      type_length_ = descr_->type_length();
+    } else {
+      type_length_ = -1;
+    }
+  }
+
+  int Decode(T* buffer, int max_values) override;
+
+  int DecodeArrow(int num_values, int null_count, const uint8_t* valid_bits,
+                  int64_t valid_bits_offset,
+                  typename EncodingTraits<DType>::Accumulator* builder) override{
+                     //not used in this mp, no need to implement.
+                     return 0;
+                  };
+
+  int DecodeArrow(int num_values, int null_count, const uint8_t* valid_bits,
+                  int64_t valid_bits_offset,
+                  typename EncodingTraits<DType>::DictAccumulator* builder) override{
+                     //not used in this mp, no need to implement.
+                     return 0;
+                  };
+};
+
+
+template <typename DType>
 int ASCIIDecoder<DType>::Decode(T* buffer, int max_values) {
-  int values_decoded = 0;
+ int values_decoded = 0;
 
   // Loop until max_values are decoded or end of input is reached
   while (values_decoded < max_values && len_ > 0) {
